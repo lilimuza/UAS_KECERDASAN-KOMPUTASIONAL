@@ -1,0 +1,71 @@
+import numpy as np
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dense, Dropout
+
+# Contoh data teks
+texts = [
+    "I love this movie, it's fantastic!",
+    "This film was terrible, I hated it.",
+    "Amazing storyline and wonderful characters.",
+    "Awful, not worth the time.",
+    "Great movie, would watch again!",
+    "Bad acting, poor plot.",
+    "Simply superb, a must-watch.",
+    "Terrible, I walked out halfway.",
+    "Loved the cinematography!",
+    "Worst movie I've ever seen."
+]
+
+# Label: 1 untuk positif, 0 untuk negatif
+labels = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
+
+# Tentukan jumlah fitur (kata unik) yang akan digunakan
+max_features = 5000
+max_len = 50
+
+# Tokenisasi teks
+tokenizer = Tokenizer(num_words=max_features)
+tokenizer.fit_on_texts(texts)
+sequences = tokenizer.texts_to_sequences(texts)
+
+# Padding sequences
+x_data = pad_sequences(sequences, maxlen=max_len)
+y_data = np.array(labels)
+
+# Memisahkan data untuk training dan testing (80% training, 20% testing)
+train_size = int(0.8 * len(x_data))
+x_train, x_test = x_data[:train_size], x_data[train_size:]
+y_train, y_test = y_data[:train_size], y_data[train_size:]
+
+# Membangun model
+model = Sequential()
+model.add(Embedding(max_features, 128, input_length=max_len))
+model.add(Conv1D(128, 7, activation='relu'))
+model.add(GlobalMaxPooling1D())
+model.add(Dense(1, activation='sigmoid'))
+
+# Kompilasi model
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# Menampilkan ringkasan model
+model.summary()
+
+# Training model
+history = model.fit(x_train, y_train,
+                    epochs=10,
+                    batch_size=2,  # Karena data hanya sedikit, batch_size kecil
+                    validation_split=0.2)
+
+# Evaluasi model pada data uji
+score, acc = model.evaluate(x_test, y_test, batch_size=2)
+print(f'Test score: {score}')
+print(f'Test accuracy: {acc}')
+
+# Prediksi pada data uji
+predictions = model.predict(x_test)
+# Mengubah probabilitas menjadi kelas (0 atau 1)
+predictions = (predictions > 0.5).astype("int32")
+print(f'Predictions: {predictions.flatten()}')
+print(f'Actual Labels: {y_test}')
